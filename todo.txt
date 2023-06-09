@@ -1,0 +1,19 @@
+grep -rnw './' -e 'string to match'
+
+    -r recursive
+    -n line number
+    -w match whole word (no partials)
+    -e string to match
+
+start test.exe will run program with window
+test.exe will run program in terminal without window
+
+*****************************************************
+select group will query database and list select star data
+    make header file in vaquita that allows usage of client - need sockets for this
+    display star information in GUI
+
+Integrate opengl for 3d
+    main map is in 2d, but user can have camera zoom in to view star in 3d
+    when in 3d mode, can pan camera around in 3 dimensions to see all star locations in 3d
+
