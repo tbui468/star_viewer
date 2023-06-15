@@ -77,49 +77,43 @@ int main(int argc, char** argv) {
     }
 
     VDBHANDLE h = vdbclient_connect("127.0.0.1", "3333");
-    char* buf;
-    if (!(buf = vdbclient_execute_query(h, "open universe;"))) {
+    struct VdbReader reader = vdbclient_execute_query(h, "open universe;");
+    if (!reader.buf) {
         printf("failed\n");
     } else {
-        printf("%s\n", buf);
-        free(buf);
+        free(reader.buf);
     }
 
 
     SDL_FPoint* points;
     int star_count;
-    //if (!(buf = vdbclient_execute_query(h, "select x, y from stars where x > -10.0 and x < 10.0 and y > -10.0 and y < 10.0;"))) {
-    if (!(buf = vdbclient_execute_query(h, "select x, y from stars where x < 100.0;"))) {
+    reader = vdbclient_execute_query(h, "select x, y from stars where y < 100.0;");
+
+    if (!reader.buf) {
         printf("failed\n");
     } else {
-        printf("%s\n", buf);
-        star_count = strlen(buf) / 20; //20 characters per line (8 each each coord and comma + space/newline)
-        points = malloc(sizeof(SDL_FPoint) * star_count);
+        //need to rewrite this to use new serialization format
+        uint32_t row;
+        uint32_t col;
+        vdbreader_next_set_dim(&reader, &row, &col);
+        star_count = row;
+
+        points = malloc(sizeof(SDL_FPoint) * row);
+        for (uint32_t i = 0; i < row; i++) {
+            enum VdbTokenType type = vdbreader_next_type(&reader);
+            points[i].x = vdbreader_next_float(&reader) * 10.0f;
+            type = vdbreader_next_type(&reader);
+            points[i].y = vdbreader_next_float(&reader) * 10.0f;
+        }
+        /*
         for (int i = 0; i < star_count; i++) {
-            //TODO: this won't work since negatives will mess everything up
-            int off = i * 20;
-            buf[off + 8] = '\0';
-            buf[off + 18] = '\0';
-            char* c;
-            points[i].x = strtof(&buf[off], &c) * 10.0f;
-            points[i].y = strtof(&buf[off + 10], &c) * 10.0f;
-        }
-        free(buf);
+            int off = sizeof(int32_t) + i * sizeof(double) * 2;
+            points[i].x = *((double*)(buf + off)) * 10.0f;
+            points[i].y = *((double*)(buf + off + sizeof(double))) * 10.0f;
+            printf("%f, %f\n", points[i].x, points[i].y);
+        }*/
+        free(reader.buf);
     }
-    /*
-    int star_count = 10000;
-    SDL_FPoint points[10000];
-    for (int i = 0; i < star_count; i++) {
-        while (1) {
-            points[i].x = (((float)rand()) / RAND_MAX - 0.5f) * WIN_WIDTH;
-            points[i].y = (((float)rand()) / RAND_MAX - 0.5f) * WIN_WIDTH;
-            if (sqrtf(points[i].x * points[i].x + points[i].y * points[i].y) < WIN_WIDTH / 2) {
-                points[i].x += WIN_WIDTH / 2;
-                points[i].y += WIN_HEIGHT / 2;
-                break;
-            }
-        }
-    }*/
 
     struct nk_colorf bg;
     bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
@@ -163,12 +157,6 @@ int main(int argc, char** argv) {
                     }
                     if (e.button.button == SDL_BUTTON_LEFT) {
                         draw = false;
-                        if (!(buf = vdbclient_execute_query(h, "select prop, x, y from stars where x > 100.0 and x < 300.0;"))) {
-                            printf("failed\n");
-                        } else {
-                            printf("%s\n", buf);
-                            free(buf);
-                        }
                     }
                     break;
             }
@@ -262,8 +250,10 @@ int main(int argc, char** argv) {
     }
 
     //TODO: should free buf after executing each query here
-    buf = vdbclient_execute_query(h, "close universe;");
-    buf = vdbclient_execute_query(h, "exit;");
+    reader = vdbclient_execute_query(h, "close universe;");
+    free(reader.buf);
+    reader = vdbclient_execute_query(h, "exit;");
+    free(reader.buf);
     vdbclient_disconnect(h);
 
     nk_sdl_shutdown();
