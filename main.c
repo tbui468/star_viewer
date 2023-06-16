@@ -101,17 +101,12 @@ int main(int argc, char** argv) {
         points = malloc(sizeof(SDL_FPoint) * row);
         for (uint32_t i = 0; i < row; i++) {
             enum VdbTokenType type = vdbreader_next_type(&reader);
-            points[i].x = vdbreader_next_float(&reader) * 10.0f;
+            int64_t id = vdbreader_next_int(&reader);
             type = vdbreader_next_type(&reader);
-            points[i].y = vdbreader_next_float(&reader) * 10.0f;
+            points[i].x = vdbreader_next_float(&reader) * 100.0f;
+            type = vdbreader_next_type(&reader);
+            points[i].y = vdbreader_next_float(&reader) * 100.0f;
         }
-        /*
-        for (int i = 0; i < star_count; i++) {
-            int off = sizeof(int32_t) + i * sizeof(double) * 2;
-            points[i].x = *((double*)(buf + off)) * 10.0f;
-            points[i].y = *((double*)(buf + off + sizeof(double))) * 10.0f;
-            printf("%f, %f\n", points[i].x, points[i].y);
-        }*/
         free(reader.buf);
     }
 
